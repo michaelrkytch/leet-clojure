@@ -1,5 +1,10 @@
 (ns graph-util)
 
+;;
+;; edge-seq -- representing a graph as a sequence of vertex pairs
+;;
+
+
 (defn edge-map [edge-seq]
   (reduce (fn [m [source target]]
             (update m source #((fnil conj #{}) % target)))
@@ -34,7 +39,6 @@
   (let [edge-map (edge-map edge-seq)]
     (loop [indegrees (indegrees edge-seq)
            path []]
-      (tap> (str "indegrees: " indegrees "\n path: " path))
       (if-let [next-root (find-root indegrees)]
         (let [new-indegrees (remove-root indegrees edge-map next-root)
               new-path (conj path next-root)]
@@ -45,3 +49,23 @@
           nil
           ;; else we have a valid sort
           path)))))
+
+
+;; Traverse graph from the given root breadth-first.
+;; Return the sequence of nodes visited
+;; childrenfn [v graph] returns the neihbors of v in graph
+;; Graph representation can by anything that supports neighnorsfn
+(defn bfs [graph childrenfn root]
+  (loop [visitqueue (conj (clojure.lang.PersistentQueue/EMPTY) root)
+         visited []]
+    (if (empty? visitqueue)
+      visited
+      ;; else
+      (let [v (peek visitqueue)
+            neighbors (childrenfn v graph)
+            new-visitqueue (apply conj (pop visitqueue) neighbors)]
+        (if (some #(= % v) visited)
+          ;; if we've already visited v, continue with remaining nodes in queue
+          (recur (pop visitqueue) visited)
+          ;; else add v to the visited list and add its neighbors to the queue
+          (recur new-visitqueue (conj visited v)))))))
